@@ -2,15 +2,19 @@ import logging
 
 from django.http import Http404, HttpResponse
 from django.urls import reverse
+from django.utils import timezone
 from django.shortcuts import render, redirect
 from django.contrib.auth import get_user_model
+from django.contrib.auth import login
 from django.contrib import messages
 from django.core.exceptions import ObjectDoesNotExist, MultipleObjectsReturned
 from django.core.signing import SignatureExpired, BadSignature
 
+
 from .app_configurations import GetFieldFromSettings
 from .confirm import verify_user
 from .email_handler import resend_verification_email
+from .token_manager import TokenManager
 from .forms import RequestNewVerificationEmail
 from .errors import (
     InvalidToken,
@@ -19,11 +23,13 @@ from .errors import (
     UserNotFound,
 )
 
+
 logger = logging.getLogger(__name__)
 
 pkg_configs = GetFieldFromSettings()
 
 login_page = pkg_configs.get('login_page')
+finish_signup_page = pkg_configs.get('finish_signup_page')
 
 success_msg = pkg_configs.get('verification_success_msg')
 failed_msg = pkg_configs.get('verification_failed_msg')
@@ -44,8 +50,12 @@ def verify_user_and_activate(request, useremail, usertoken):
     """
     if request.method == 'GET':
         try:
-            verified = verify_user(useremail, usertoken)
-            if verified is True:
+            user = TokenManager().decrypt_link(useremail, usertoken)
+            if user:
+                user.is_active = True
+                user.last_login = timezone.now()
+                user.save()
+                login(request, user)
                 if login_page and not success_template:
                     messages.success(request, success_msg)
                     return redirect(to=login_page)
@@ -55,7 +65,7 @@ def verify_user_and_activate(request, useremail, usertoken):
                     context={
                         'msg': success_msg,
                         'status': 'Verification Successful!',
-                        'link': reverse(login_page)
+                        'link': reverse(finish_signup_page)
                     }
                 )
             else:
