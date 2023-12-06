@@ -4,13 +4,13 @@ from django.conf import settings
 class GetFieldFromSettings:
     """
     This class fetches the attributes that are defined in settings.py of your project by user OR Django itself.
-    self.default_configs : is a dict with keys as the names used in this app and values being a tuple of 
+    self.default_configs : is a dict with keys as the names used in this app and values being a tuple of
                            attributes defined in settings.py and their corresponding default values if not found.
-    
-    There is a special case in "get" method, if you set "VERIFICATION_SUCCESS_TEMPLATE" as None is settings.py, it 
+
+    There is a special case in "get" method, if you set "VERIFICATION_SUCCESS_TEMPLATE" as None is settings.py, it
     will skip the intermediate page where success information is displayed. (This is better explained in docs.)
 
-    The "get" method takes the name of the attributes as input, checks for it in settings.py, 
+    The "get" method takes the name of the attributes as input, checks for it in settings.py,
             if found:
                 returns the corresponding value.
             else:
@@ -49,6 +49,11 @@ class GetFieldFromSettings:
                 'LOGIN_URL',
                 'accounts_login'
             ),
+            'finish_signup_page': (
+                'FINISH_SIGNUP_URL',
+                'finish-signup'
+            ),
+
 
             'verification_success_template': (
                 'VERIFICATION_SUCCESS_TEMPLATE',
