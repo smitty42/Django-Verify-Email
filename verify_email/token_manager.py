@@ -113,7 +113,7 @@ class TokenManager(signing.TimestampSigner):
         user.linkcounter.sent_count += 1
         user.linkcounter.save()
 
-    def __generate_token(self, user):
+    def generate_token(self, user):
         """
         If "EXPIRE_AFTER" is specified in settings.py, will generate a timestamped signed encrypted token for
         user, otherwise will generate encrypted token without timestamp.
@@ -134,8 +134,7 @@ class TokenManager(signing.TimestampSigner):
             return False
         return True
 
-    @staticmethod
-    def get_user_by_token(plain_email, encrypted_token):
+    def get_user_by_token(self, plain_email, encrypted_token):
         """
         returns either a bool or user itself which fits the token and is not active.
         Exceptions Raised
@@ -145,6 +144,7 @@ class TokenManager(signing.TimestampSigner):
             - UserNotFound
         """
         inactive_users = get_user_model().objects.filter(email=plain_email)
+        encrypted_token = self.perform_decoding(encrypted_token)
         encrypted_token = encrypted_token.split(':')[0]
         for unique_user in inactive_users:
             valid = default_token_generator.check_token(unique_user, encrypted_token)
@@ -177,7 +177,7 @@ class TokenManager(signing.TimestampSigner):
         """
         Generates link for the first time.
         """
-        token = self.__generate_token(inactive_user)
+        token = self.generate_token(inactive_user)
         encoded_email = urlsafe_b64encode(str(user_email).encode('utf-8')).decode('utf-8')
 
         link = f"/verification/user/verify-email/{encoded_email}/{token}/"
