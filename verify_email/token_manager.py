@@ -144,7 +144,6 @@ class TokenManager(signing.TimestampSigner):
             - UserNotFound
         """
         inactive_users = get_user_model().objects.filter(email=plain_email)
-        encrypted_token = self.perform_decoding(encrypted_token)
         encrypted_token = encrypted_token.split(':')[0]
         for unique_user in inactive_users:
             valid = default_token_generator.check_token(unique_user, encrypted_token)
@@ -196,7 +195,7 @@ class TokenManager(signing.TimestampSigner):
         else:
             raise MaxRetriesExceeded(f'Maximum retries for user with email: {user_email} has been exceeded.')
 
-    def decrypt_link(self, encoded_email, encoded_token):
+    def decrypt_token(self, plain_email, encoded_token):
         """
         main verification and decryption happens here.
         Exceptions Raised
@@ -207,22 +206,20 @@ class TokenManager(signing.TimestampSigner):
             - UserAlreadyActive
             - InvalidToken
         """
-        decoded_email = self.perform_decoding(encoded_email)
         decoded_token = self.perform_decoding(encoded_token)
-
-        if decoded_email and decoded_token:
+        if plain_email and decoded_token:
             if self.max_age:
                 alive_time = self.__get_seconds(self.max_age)
                 try:
                     user_token = self.unsign(decoded_token, alive_time)
-                    user = self.get_user_by_token(decoded_email, user_token)
+                    user = self.get_user_by_token(plain_email, user_token)
                     if user:
                         return user
                     return False
 
                 except signing.SignatureExpired:
                     logger.warning(f'\n{"~" * 40}\n[WARNING] : The link is Expired!\n{"~" * 40}\n')
-                    user = self.get_user_by_token(decoded_email, self.__decrypt_expired_user(decoded_token))
+                    user = self.get_user_by_token(plain_email, self.__decrypt_expired_user(decoded_token))
                     if not self.__verify_attempts(user):
                         raise MaxRetriesExceeded()
                     raise
@@ -233,7 +230,7 @@ class TokenManager(signing.TimestampSigner):
                     )
                     raise
             else:
-                user = self.get_user_by_token(decoded_email, decoded_token)
+                user = self.get_user_by_token(plain_email, decoded_token)
                 return user if user else False
         else:
             logger.error(f'\n{"~" * 40}\nError occurred in decoding the link!\n{"~" * 40}\n')
